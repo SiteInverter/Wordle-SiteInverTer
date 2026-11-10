@@ -1,0 +1,221 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WORD QUEST</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;background:#101522;color:white;
+ font-family:Arial,sans-serif;text-align:center;
+ min-height:100vh;padding:20px 12px;
+}
+header{padding:15px;border-bottom:1px solid #30394c}
+h1{letter-spacing:5px;font-size:30px;margin:5px}
+header p{color:#91a2bc;font-size:12px;letter-spacing:2px}
+#board{
+ display:grid;grid-template-columns:repeat(5,58px);
+ gap:7px;justify-content:center;margin:30px auto 25px;
+}
+.tile{
+ width:58px;height:58px;border:2px solid #39445a;
+ display:flex;align-items:center;justify-content:center;
+ font-size:25px;font-weight:bold;border-radius:5px;
+ text-transform:uppercase;
+}
+.tile.filled{border-color:#8796ad}
+.correct{background:#47865d;border-color:#47865d}
+.present{background:#b59a43;border-color:#b59a43}
+.absent{background:#384254;border-color:#384254}
+#message{height:25px;color:#c5d7ef;font-size:14px}
+#keyboard{
+ max-width:500px;margin:20px auto;
+ display:flex;flex-direction:column;gap:8px;
+}
+.keyrow{display:flex;justify-content:center;gap:5px}
+.key{
+ background:#536077;color:white;border:0;
+ border-radius:5px;min-width:8%;height:53px;
+ font-weight:bold;font-size:14px;cursor:pointer;
+}
+.key.wide{min-width:15%;font-size:11px}
+.key.correct{background:#47865d}
+.key.present{background:#b59a43}
+.key.absent{background:#30394a}
+button:active{transform:scale(.95)}
+#newGame{
+ background:#73b8ff;color:#101522;
+ border:0;border-radius:25px;padding:14px 30px;
+ font-weight:bold;font-size:15px;margin-top:12px;
+ cursor:pointer;
+}
+footer{color:#718099;font-size:12px;margin-top:35px}
+</style>
+</head>
+<body>
+<header>
+<h1>WORD QUEST</h1>
+<p>FIND THE HIDDEN WORD</p>
+</header>
+
+<div id="board"></div>
+<div id="message">You have 6 attempts. Good luck!</div>
+<div id="keyboard"></div>
+<button id="newGame" onclick="startGame()">NEW GAME</button>
+<footer>WORD QUEST © 2026 · THINK. GUESS. CONQUER.</footer>
+
+<script>
+const words=[
+"APPLE","BRAIN","CLOUD","DREAM","EARTH",
+"FLAME","GRAPE","HEART","LIGHT","MOUSE",
+"NIGHT","OCEAN","PLANT","QUEEN","RIVER",
+"SPACE","STORM","TRAIN","WATER","WORLD",
+"BRAVE","CHARM","DANCE","EAGLE","FAITH",
+"GHOST","HOUSE","JUICE","KNIFE","LASER",
+"MUSIC","NORTH","OFFER","PEACE","QUIET",
+"ROBOT","SNAKE","TIGER","UNITY","VOICE",
+"BEACH","CANDY","DARKS","ENJOY","FROST",
+"GIANT","HONEY","IMAGE","MAGIC","NOVEL",
+"POWER","RADIO","SHARK","TOAST","YOUTH"
+];
+
+let answer="",row=0,guess="",over=false;
+let history={},board=[];
+
+const boardEl=document.getElementById("board");
+const keyboardEl=document.getElementById("keyboard");
+const message=document.getElementById("message");
+
+function startGame(){
+ answer=words[Math.floor(Math.random()*words.length)];
+ row=0;guess="";over=false;history={};board=[];
+ message.textContent="You have 6 attempts. Good luck!";
+ boardEl.innerHTML="";
+ keyboardEl.innerHTML="";
+
+ for(let i=0;i<30;i++){
+  const tile=document.createElement("div");
+  tile.className="tile";
+  tile.id="tile"+i;
+  boardEl.appendChild(tile);
+ }
+
+ const rows=["QWERTYUIOP","ASDFGHJKL","ZXCVBNM"];
+ rows.forEach((letters,index)=>{
+  const line=document.createElement("div");
+  line.className="keyrow";
+  if(index===2){
+   line.appendChild(makeKey("ENTER","wide"));
+  }
+  [...letters].forEach(letter=>{
+   line.appendChild(makeKey(letter,""));
+  });
+  if(index===2){
+   line.appendChild(makeKey("⌫","wide"));
+  }
+  keyboardEl.appendChild(line);
+ });
+}
+
+function makeKey(letter,extra){
+ const btn=document.createElement("button");
+ btn.className="key "+extra;
+ btn.textContent=letter;
+ btn.onclick=()=>press(letter);
+ if(letter.length===1)btn.id="key"+letter;
+ return btn;
+}
+
+function press(key){
+ if(over)return;
+
+ if(key==="ENTER"){
+  submitGuess();return;
+ }
+ if(key==="⌫"||key==="BACKSPACE"){
+  guess=guess.slice(0,-1);
+  updateRow();return;
+ }
+ if(/^[A-Z]$/.test(key)&&guess.length<5){
+  guess+=key;
+  updateRow();
+ }
+}
+
+function updateRow(){
+ for(let i=0;i<5;i++){
+  const tile=document.getElementById("tile"+(row*5+i));
+  tile.textContent=guess[i]||"";
+  tile.classList.toggle("filled",!!guess[i]);
+ }
+}
+
+function submitGuess(){
+ if(guess.length!==5){
+  message.textContent="You need five letters!";
+  return;
+ }
+ if(!words.includes(guess)){
+  message.textContent="That word isn't in our word list!";
+  return;
+ }
+
+ const result=Array(5).fill("absent");
+ const remaining=answer.split("");
+
+ // First check exact matches.
+ for(let i=0;i<5;i++){
+  if(guess[i]===answer[i]){
+   result[i]="correct";
+   remaining[i]=null;
+  }
+ }
+ // Then check misplaced letters.
+ for(let i=0;i<5;i++){
+  if(result[i]==="correct")continue;
+  const found=remaining.indexOf(guess[i]);
+  if(found!==-1){
+   result[i]="present";
+   remaining[found]=null;
+  }
+ }
+
+ for(let i=0;i<5;i++){
+  const tile=document.getElementById("tile"+(row*5+i));
+  tile.classList.add(result[i]);
+  const key=document.getElementById("key"+guess[i]);
+  if(key){
+   const priority={absent:1,present:2,correct:3};
+   const old=history[guess[i]];
+   if(!old||priority[result[i]]>priority[old]){
+    history[guess[i]]=result[i];
+    key.className="key "+result[i];
+   }
+  }
+ }
+
+ row++;
+ if(guess===answer){
+  message.textContent="🎉 Brilliant! You found the word!";
+  over=true;
+ }else if(row===6){
+  message.textContent="Game over! The word was "+answer+".";
+  over=true;
+ }else{
+  message.textContent=(6-row)+" attempts remaining.";
+ }
+ guess="";
+}
+
+document.addEventListener("keydown",e=>{
+ if(e.key==="Enter")press("ENTER");
+ else if(e.key==="Backspace")press("BACKSPACE");
+ else if(/^[a-zA-Z]$/.test(e.key))press(e.key.toUpperCase());
+});
+
+startGame();
+</script>
+</body>
+</html>
